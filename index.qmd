@@ -195,29 +195,29 @@ tribal_lands <- tribal_lands |>
       TRUE ~ NA
     ),
     flag_url = case_when(
-      name == "Ak-Chin Indian Community" ~ "https://en.wikipedia.org/wiki/Ak-Chin_Indian_Community#/media/File:Flag_of_the_Ak-Chin_Indian_Community.svg",
-      name == "Cocopah Indian Tribe" ~ "https://en.wikipedia.org/wiki/Cocopah_Indian_Reservation#/media/File:Flag_of_the_Cocopah_Reservation.svg",
-      name == "Colorado River Indian Tribes" ~ "https://en.wikipedia.org/wiki/Colorado_River_Indian_Tribes#/media/File:Flag_of_the_Colorado_River_Indian_Tribes.svg",
-      name == "Fort McDowell Yavapai Nation" ~ 1006,
-      name == "Fort Mojave Indian Tribe" ~ 1572,
-      name == "Gila River Indian Community" ~ 12179,
-      name == "Havasupai Tribe" ~ 730,
-      name == "Hopi Tribe" ~ 7895,
-      name == "Hualapai Tribe" ~ 1738,
-      name == "Kaibab-Paiute Tribe" ~ 249,
-      name == "Navajo Nation" ~ 166545,
-      name == "Pascua Yaqui Tribe" ~ 3678,
-      name == "Pueblo of Zuni" ~ 8134,
-      name == "Quechan Tribe" ~ 1536,
-      name == "Salt River Pima-Maricopa Indian Community" ~ 5949,
-      name == "San Carlos Apache Tribe" ~ 10204,
-      name == "Tohono O'odham Nation" ~ 10052,
-      name == "Tonto Apache Tribe" ~ 102,
-      name == "White Mountain Apache Tribe" ~ 14620,
-      name == "Yavapai-Apache Tribe" ~ 1085,
-      name == "Yavapai-Prescott Indian Tribe" ~ 551,
-      TRUE ~ NA
-    )
+      name == "Ak-Chin Indian Community" ~ "https://upload.wikimedia.org/wikipedia/commons/7/7b/Flag_of_the_Ak-Chin_Indian_Community.svg",
+      name == "Cocopah Indian Tribe" ~ "https://upload.wikimedia.org/wikipedia/commons/7/78/Flag_of_the_Cocopah_Reservation.svg",
+      name == "Colorado River Indian Tribes" ~ "https://upload.wikimedia.org/wikipedia/commons/9/9f/Flag_of_the_Colorado_River_Indian_Tribes.svg",
+      name == "Fort McDowell Yavapai Nation" ~ "https://raw.githubusercontent.com/Gchism94/posit-table-2024/main/images/Fort_McDowell_Yavapai_Nation.jpg",
+      name == "Fort Mojave Indian Tribe" ~ NA,
+      name == "Gila River Indian Community" ~ "https://upload.wikimedia.org/wikipedia/commons/0/08/Flag_of_the_Gila_River_Indian_Community.svg",
+      name == "Havasupai Tribe" ~ NA,
+      name == "Hopi Tribe" ~ "https://upload.wikimedia.org/wikipedia/commons/7/74/Flag_of_the_Hopi_Reservation.svg",
+      name == "Hualapai Tribe" ~ NA,
+      name == "Kaibab-Paiute Tribe" ~ NA,
+      name == "Navajo Nation" ~ "https://upload.wikimedia.org/wikipedia/commons/0/0c/Navajo_flag.svg",
+      name == "Pascua Yaqui Tribe" ~ "https://upload.wikimedia.org/wikipedia/commons/4/41/Flag_of_the_Pascua_Yaqui_Tribe_of_Arizona.svg",
+      name == "Pueblo of Zuni" ~ NA,
+      name == "Quechan Tribe" ~ "https://upload.wikimedia.org/wikipedia/commons/d/d0/Quechan_tribal_seal.jpg",
+      name == "Salt River Pima-Maricopa Indian Community" ~ "https://upload.wikimedia.org/wikipedia/en/a/a1/Srpmic.jpg",
+      name == "San Carlos Apache Tribe" ~ "https://upload.wikimedia.org/wikipedia/commons/0/0c/Flag_of_the_San_Carlos_Apache_Tribe.PNG",
+      name == "Tohono O'odham Nation" ~ "https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_the_Tohono_O%27odham_Nation.svg",
+      name == "Tonto Apache Tribe" ~ "https://upload.wikimedia.org/wikipedia/commons/8/80/Flag_of_the_Tonto_Apache_Tribe.png",
+      name == "White Mountain Apache Tribe" ~ "https://www.familysearch.org/en/wiki/img_auth.php/f/fa/White_Mountain_Apache_Tribe.jpg",
+      name == "Yavapai-Apache Tribe" ~ "https://upload.wikimedia.org/wikipedia/commons/6/60/Flag_of_the_Yavapai-Apache_Nation.PNG",
+      name == "Yavapai-Prescott Indian Tribe" ~ "https://upload.wikimedia.org/wikipedia/commons/4/49/Flag_of_the_Yavapai-Prescott_Tribe.svg",
+      TRUE ~ ""
+    ),
     number = dense_rank(name)) 
 
 
@@ -252,7 +252,6 @@ tribal_lands_water <-
   left_join(water_rights, join_by(name == tribe)) |>
   mutate(years = ifelse(is.na(recognized), 2024 - claim, 
                               recognized - claim))
-
 ```
 
 ### Arizona Indigenous Tribal Boundaries
@@ -316,30 +315,31 @@ p_load(here,          # for standardized file paths
 tribal_lands_water_agg <- 
   tribal_lands_water |>
   # Group data by columns
-  group_by(name, url, years) |>
+  group_by(name, url, years, flag_url) |>
   # Create a percentage column, rounded to two decimal points
   summarise(land = sum(aland) / (1000^2),
             water = sum(awater) / (1000^2),
             pop = sum(pop),
-            .groups = "keep")
+            .groups = "drop")
 
 # HTML tables for UA position and UA department affiliation
 #indigenousGeneralTable <- 
   tribal_lands_water_agg |>
-    ungroup() |>
     st_drop_geometry() |>
     mutate(tribe = ifelse(name == "Kaibab-Paiute Tribe",
                           paste0("<a href='", url, "'>", name, "*", "</a>"),
                           paste0("<a href='", url, "'>", name, "</a>")),
            ) |>
     select(-c(url, name)) |>
-    relocate(tribe, .before = years) |>
+    relocate(flag_url, .before = years) |>
     relocate(pop, .after = years) |>
+    relocate(tribe, .before = flag_url) |>
   # Reactable argument
   reactable(
     # Clean theme with base font size 16pt
     theme = reactableTheme(
-      style = list(fontSize = "1rem")
+      style = list(fontSize = "1rem",
+                   fontFamily = "Lato, sans-serif")
     ),
     width = 1250,
     # Default table sort by years column
@@ -351,10 +351,15 @@ tribal_lands_water_agg <-
     # Columns list
     columns = list(
       # name column
-      tribe = colDef(maxWidth = 350,
+      tribe = colDef(maxWidth = 250,
                     name = "Tribe",
                     html = TRUE),
       
+      flag_url = colDef(name = '',
+                        maxWidth = 80,
+                        sortable = FALSE,
+                        style = background_img(height = "120%", width = "100%")
+        ),
       # pop column
       pop = colDef(maxWidth = 120,
                    name = "Population",
