@@ -36,6 +36,8 @@ if(!require(pacman))
 
 pacman::p_load(cowplot,
                here,
+               htmltools,
+               lwgeom,
                tidyverse,
                tigris,
                sf,
@@ -89,24 +91,24 @@ Reading data from AZ counties data from {tigris} and cleaning up column names us
 ```{r}
 #| label: label-me-2
 # Download the shapefile for Arizona counties
-az_map <- states(cb = TRUE, progress = FALSE) |>
-  janitor::clean_names() |>
+az_map <- states(cb = TRUE, progress = FALSE) %>%
+  janitor::clean_names() %>%
   filter(name == "Arizona")
 
-rivers <- st_read(here("data", "azRivers", "Major_Rivers.shp")) |> 
-  clean_names() |>
+rivers <- st_read(here("data", "azRivers", "Major_Rivers.shp")) %>% 
+  clean_names() %>%
   st_transform(crs = st_crs(az_map))
 
 az_rivers_gila <- subset(rivers, name == "Gila River")
 az_rivers_colorado <- subset(rivers, name == "Colorado River")
 az_rivers_little_colorado <- subset(rivers, name == "Little Colorado River")
 
-lakes <- st_read(here("data", "azLakes", "Major_Lakes.shp")) |> 
-  clean_names() |>
+lakes <- st_read(here("data", "azLakes", "Major_Lakes.shp")) %>% 
+  clean_names() %>%
   st_transform(crs = st_crs(az_map))
 
-centralAZ <- st_read(here("data", "Cen_AZ_Proj", "Cen_AZ_Proj.shp")) |> 
-  clean_names() |>
+centralAZ <- st_read(here("data", "Cen_AZ_Proj", "Cen_AZ_Proj.shp")) %>% 
+  clean_names() %>%
   st_transform(crs = st_crs(az_map))
 ```
 
@@ -128,106 +130,106 @@ Reading `.shp` data from the data folder using `st_read` the {sp} package. There
 -   Transform the `crs` to the same as the `az_counties_pop` to ensure its standardized.
 
 ```{r az_tribes}
-tribal_lands <- st_read(here("data", "azTribes", "American_Indian_Reservations_in_Arizona.shp")) |> 
+tribal_lands <- st_read(here("data", "azTribes", "American_Indian_Reservations_in_Arizona.shp")) %>% 
   clean_names()
 tribal_lands <- st_set_crs(tribal_lands, 4269)
 tribal_lands <- st_transform(tribal_lands, crs = st_crs(az_map))
 
-tribal_lands <- tribal_lands |>
+tribal_lands <- tribal_lands %>%
   mutate(
-    name = case_when(
-      name = str_detect(name, "Ak-Chin") ~ "Ak-Chin Indian Community",
-      name = str_detect(name, "Hopi") ~ "Hopi Tribe",
-      name = str_detect(name, "Hualapai") ~ "Hualapai Tribe",
-      name = str_detect(name, "Navajo") ~ "Navajo Nation",
-      name = str_detect(name, "Pascua") ~ "Pascua Yaqui Tribe",	
-      name = str_detect(name, "Tohono") ~ "Tohono O'odham Nation",
-      name = str_detect(name, "Tonto Apache") ~ "Tonto Apache Tribe",
-      name = str_detect(name, "Yavapai-Apache") ~ "Yavapai-Apache Tribe",
+    tribe = case_when(
+      tribe = str_detect(name, "Ak-Chin") ~ "Ak-Chin Indian Community",
+      tribe = str_detect(name, "Hopi") ~ "Hopi Tribe",
+      tribe = str_detect(name, "Hualapai") ~ "Hualapai Tribe",
+      tribe = str_detect(name, "Navajo") ~ "Navajo Nation",
+      tribe = str_detect(name, "Pascua") ~ "Pascua Yaqui Tribe",	
+      tribe = str_detect(name, "Tohono") ~ "Tohono O'odham Nation",
+      tribe = str_detect(name, "Tonto Apache") ~ "Tonto Apache Tribe",
+      tribe = str_detect(name, "Yavapai-Apache") ~ "Yavapai-Apache Tribe",
       TRUE ~ name
     ),
     url = case_when(
-      name == "Ak-Chin Indian Community" ~ "https://ak-chin.nsn.us/",
-      name == "Cocopah Indian Tribe" ~ "https://www.cocopah.com/",
-      name == "Colorado River Indian Tribes" ~ "https://www.crit-nsn.gov/",
-      name == "Fort McDowell Yavapai Nation" ~ "https://fmyn.org/",
-      name == "Fort Mojave Indian Tribe" ~ "https://www.fortmojaveindiantribe.com/",
-      name == "Gila River Indian Community" ~ "https://www.gilariver.org/",
-      name == "Havasupai Tribe" ~ "https://theofficialhavasupaitribe.com/",
-      name == "Hopi Tribe" ~ "https://www.hopi-nsn.gov/",
-      name == "Hualapai Tribe" ~ "https://hualapai-nsn.gov/",
-      name == "Kaibab-Paiute Tribe" ~ "https://www.kaibabpaiute-nsn.gov/",
-      name == "Navajo Nation" ~ "https://www.navajo-nsn.gov/",
-      name == "Pascua Yaqui Tribe" ~ "https://www.pascuayaqui-nsn.gov/",
-      name == "Pueblo of Zuni" ~ "https://www.ashiwi.org/",
-      name == "Quechan Tribe" ~ "https://www.quechantribe.com/index.html",
-      name == "Salt River Pima-Maricopa Indian Community" ~ "https://www.srpmic-nsn.gov/",
-      name == "San Carlos Apache Tribe" ~ "https://itcaonline.com/member-tribes/san-carlos-apache-tribe/",
-      name == "Tohono O'odham Nation" ~ "http://www.tonation-nsn.gov/",
-      name == "Tonto Apache Tribe" ~ "https://itcaonline.com/member-tribes/tonto-apache-tribe/",
-      name == "White Mountain Apache Tribe" ~ "http://www.wmat.us/",
-      name == "Yavapai-Apache Tribe" ~ "https://yavapai-apache.org/",
-      name == "Yavapai-Prescott Indian Tribe" ~ "https://ypit.com/",
+      tribe == "Ak-Chin Indian Community" ~ "https://ak-chin.nsn.us/",
+      tribe == "Cocopah Indian Tribe" ~ "https://www.cocopah.com/",
+      tribe == "Colorado River Indian Tribes" ~ "https://www.crit-nsn.gov/",
+      tribe == "Fort McDowell Yavapai Nation" ~ "https://fmyn.org/",
+      tribe == "Fort Mojave Indian Tribe" ~ "https://www.fortmojaveindiantribe.com/",
+      tribe == "Gila River Indian Community" ~ "https://www.gilariver.org/",
+      tribe == "Havasupai Tribe" ~ "https://theofficialhavasupaitribe.com/",
+      tribe == "Hopi Tribe" ~ "https://www.hopi-nsn.gov/",
+      tribe == "Hualapai Tribe" ~ "https://hualapai-nsn.gov/",
+      tribe == "Kaibab-Paiute Tribe" ~ "https://www.kaibabpaiute-nsn.gov/",
+      tribe == "Navajo Nation" ~ "https://www.navajo-nsn.gov/",
+      tribe == "Pascua Yaqui Tribe" ~ "https://www.pascuayaqui-nsn.gov/",
+      tribe == "Pueblo of Zuni" ~ "https://www.ashiwi.org/",
+      tribe == "Quechan Tribe" ~ "https://www.quechantribe.com/index.html",
+      tribe == "Salt River Pima-Maricopa Indian Community" ~ "https://www.srpmic-nsn.gov/",
+      tribe == "San Carlos Apache Tribe" ~ "https://itcaonline.com/member-tribes/san-carlos-apache-tribe/",
+      tribe == "Tohono O'odham Nation" ~ "http://www.tonation-nsn.gov/",
+      tribe == "Tonto Apache Tribe" ~ "https://itcaonline.com/member-tribes/tonto-apache-tribe/",
+      tribe == "White Mountain Apache Tribe" ~ "http://www.wmat.us/",
+      tribe == "Yavapai-Apache Tribe" ~ "https://yavapai-apache.org/",
+      tribe == "Yavapai-Prescott Indian Tribe" ~ "https://ypit.com/",
       TRUE ~ NA
     ),
     pop = case_when(
-      name == "Ak-Chin Indian Community" ~ 1450,
-      name == "Cocopah Indian Tribe" ~ 1158,
-      name == "Colorado River Indian Tribes" ~ 8385,
-      name == "Fort McDowell Yavapai Nation" ~ 1006,
-      name == "Fort Mojave Indian Tribe" ~ 1572,
-      name == "Gila River Indian Community" ~ 12179,
-      name == "Havasupai Tribe" ~ 730,
-      name == "Hopi Tribe" ~ 7895,
-      name == "Hualapai Tribe" ~ 1738,
-      name == "Kaibab-Paiute Tribe" ~ 249,
-      name == "Navajo Nation" ~ 166545,
-      name == "Pascua Yaqui Tribe" ~ 3678,
-      name == "Pueblo of Zuni" ~ 8134,
-      name == "Quechan Tribe" ~ 1536,
-      name == "Salt River Pima-Maricopa Indian Community" ~ 5949,
-      name == "San Carlos Apache Tribe" ~ 10204,
-      name == "Tohono O'odham Nation" ~ 10052,
-      name == "Tonto Apache Tribe" ~ 102,
-      name == "White Mountain Apache Tribe" ~ 14620,
-      name == "Yavapai-Apache Tribe" ~ 1085,
-      name == "Yavapai-Prescott Indian Tribe" ~ 551,
+      tribe == "Ak-Chin Indian Community" ~ 1450,
+      tribe == "Cocopah Indian Tribe" ~ 1158,
+      tribe == "Colorado River Indian Tribes" ~ 8385,
+      tribe == "Fort McDowell Yavapai Nation" ~ 1006,
+      tribe == "Fort Mojave Indian Tribe" ~ 1572,
+      tribe == "Gila River Indian Community" ~ 12179,
+      tribe == "Havasupai Tribe" ~ 730,
+      tribe == "Hopi Tribe" ~ 7895,
+      tribe == "Hualapai Tribe" ~ 1738,
+      tribe == "Kaibab-Paiute Tribe" ~ 249,
+      tribe == "Navajo Nation" ~ 166545,
+      tribe == "Pascua Yaqui Tribe" ~ 3678,
+      tribe == "Pueblo of Zuni" ~ 8134,
+      tribe == "Quechan Tribe" ~ 1536,
+      tribe == "Salt River Pima-Maricopa Indian Community" ~ 5949,
+      tribe == "San Carlos Apache Tribe" ~ 10204,
+      tribe == "Tohono O'odham Nation" ~ 10052,
+      tribe == "Tonto Apache Tribe" ~ 102,
+      tribe == "White Mountain Apache Tribe" ~ 14620,
+      tribe == "Yavapai-Apache Tribe" ~ 1085,
+      tribe == "Yavapai-Prescott Indian Tribe" ~ 551,
       TRUE ~ NA
     ),
     flag_url = case_when(
-      name == "Ak-Chin Indian Community" ~ "https://upload.wikimedia.org/wikipedia/commons/7/7b/Flag_of_the_Ak-Chin_Indian_Community.svg",
-      name == "Cocopah Indian Tribe" ~ "https://upload.wikimedia.org/wikipedia/commons/7/78/Flag_of_the_Cocopah_Reservation.svg",
-      name == "Colorado River Indian Tribes" ~ "https://upload.wikimedia.org/wikipedia/commons/9/9f/Flag_of_the_Colorado_River_Indian_Tribes.svg",
-      name == "Fort McDowell Yavapai Nation" ~ "https://raw.githubusercontent.com/Gchism94/posit-table-2024/main/images/Fort_McDowell_Yavapai_Nation.jpg",
-      name == "Fort Mojave Indian Tribe" ~ NA,
-      name == "Gila River Indian Community" ~ "https://upload.wikimedia.org/wikipedia/commons/0/08/Flag_of_the_Gila_River_Indian_Community.svg",
-      name == "Havasupai Tribe" ~ NA,
-      name == "Hopi Tribe" ~ "https://upload.wikimedia.org/wikipedia/commons/7/74/Flag_of_the_Hopi_Reservation.svg",
-      name == "Hualapai Tribe" ~ NA,
-      name == "Kaibab-Paiute Tribe" ~ NA,
-      name == "Navajo Nation" ~ "https://upload.wikimedia.org/wikipedia/commons/0/0c/Navajo_flag.svg",
-      name == "Pascua Yaqui Tribe" ~ "https://upload.wikimedia.org/wikipedia/commons/4/41/Flag_of_the_Pascua_Yaqui_Tribe_of_Arizona.svg",
-      name == "Pueblo of Zuni" ~ NA,
-      name == "Quechan Tribe" ~ "https://upload.wikimedia.org/wikipedia/commons/d/d0/Quechan_tribal_seal.jpg",
-      name == "Salt River Pima-Maricopa Indian Community" ~ "https://upload.wikimedia.org/wikipedia/en/a/a1/Srpmic.jpg",
-      name == "San Carlos Apache Tribe" ~ "https://raw.githubusercontent.com/Gchism94/posit-table-2024/main/images/Flag_of_the_San_Carlos_Apache_Tribe.svg",
-      name == "Tohono O'odham Nation" ~ "https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_the_Tohono_O%27odham_Nation.svg",
-      name == "Tonto Apache Tribe" ~ "https://raw.githubusercontent.com/Gchism94/posit-table-2024/main/images/Flag_of_the_Tonto_Apache_Tribe.svg",
-      name == "White Mountain Apache Tribe" ~ "https://www.familysearch.org/en/wiki/img_auth.php/f/fa/White_Mountain_Apache_Tribe.jpg",
-      name == "Yavapai-Apache Tribe" ~ "https://upload.wikimedia.org/wikipedia/commons/6/60/Flag_of_the_Yavapai-Apache_Nation.PNG",
-      name == "Yavapai-Prescott Indian Tribe" ~ "https://upload.wikimedia.org/wikipedia/commons/4/49/Flag_of_the_Yavapai-Prescott_Tribe.svg",
+      tribe == "Ak-Chin Indian Community" ~ "https://upload.wikimedia.org/wikipedia/commons/7/7b/Flag_of_the_Ak-Chin_Indian_Community.svg",
+      tribe == "Cocopah Indian Tribe" ~ "https://upload.wikimedia.org/wikipedia/commons/7/78/Flag_of_the_Cocopah_Reservation.svg",
+      tribe == "Colorado River Indian Tribes" ~ "https://upload.wikimedia.org/wikipedia/commons/9/9f/Flag_of_the_Colorado_River_Indian_Tribes.svg",
+      tribe == "Fort McDowell Yavapai Nation" ~ "https://raw.githubusercontent.com/Gchism94/posit-table-2024/main/images/Fort_McDowell_Yavapai_Nation.svg",
+      tribe == "Fort Mojave Indian Tribe" ~ NA,
+      tribe == "Gila River Indian Community" ~ "https://upload.wikimedia.org/wikipedia/commons/0/08/Flag_of_the_Gila_River_Indian_Community.svg",
+      tribe == "Havasupai Tribe" ~ NA,
+      tribe == "Hopi Tribe" ~ "https://upload.wikimedia.org/wikipedia/commons/7/74/Flag_of_the_Hopi_Reservation.svg",
+      tribe == "Hualapai Tribe" ~ NA,
+      tribe == "Kaibab-Paiute Tribe" ~ NA,
+      tribe == "Navajo Nation" ~ "https://upload.wikimedia.org/wikipedia/commons/0/0c/Navajo_flag.svg",
+      tribe == "Pascua Yaqui Tribe" ~ "https://upload.wikimedia.org/wikipedia/commons/4/41/Flag_of_the_Pascua_Yaqui_Tribe_of_Arizona.svg",
+      tribe == "Pueblo of Zuni" ~ NA,
+      tribe == "Quechan Tribe" ~ "https://raw.githubusercontent.com/Gchism94/posit-table-2024/main/images/Quechan_tribal_seal.svg",
+      tribe == "Salt River Pima-Maricopa Indian Community" ~ "https://raw.githubusercontent.com/Gchism94/posit-table-2024/main/images/Srpmic.svg",
+      tribe == "San Carlos Apache Tribe" ~ "https://raw.githubusercontent.com/Gchism94/posit-table-2024/main/images/Flag_of_the_San_Carlos_Apache_Tribe.svg",
+      tribe == "Tohono O'odham Nation" ~ "https://upload.wikimedia.org/wikipedia/commons/9/9e/Flag_of_the_Tohono_O%27odham_Nation.svg",
+      tribe == "Tonto Apache Tribe" ~ "https://raw.githubusercontent.com/Gchism94/posit-table-2024/main/images/Flag_of_the_Tonto_Apache_Tribe.svg",
+      tribe == "White Mountain Apache Tribe" ~ "https://raw.githubusercontent.com/Gchism94/posit-table-2024/main/images/White_Mountain_Apache_Tribe.svg",
+      tribe == "Yavapai-Apache Tribe" ~ "https://raw.githubusercontent.com/Gchism94/posit-table-2024/main/images/Flag_of_the_Yavapai-Apache_Nation.svg",
+      tribe == "Yavapai-Prescott Indian Tribe" ~ "https://upload.wikimedia.org/wikipedia/commons/4/49/Flag_of_the_Yavapai-Prescott_Tribe.svg",
       TRUE ~ ""
     ),
+    name = ifelse(name == "Tohono O’odham Nation", "Tohono O'odham Nation", name),
     number = dense_rank(name)) 
-
 
 water_rights <- tribble(
   ~tribe, ~claim, ~recognized, ~resolved,
   "Salt River Pima-Maricopa Indian Community", 1949, 1988, "Fully",
   "Cocopah Indian Tribe", 1953, 1963, "Adjudicated",
-  "Colorado River Indian Tribes", 1953, 1963, "Abjudicated",
-  "Fort Mojave Indian Tribe", 1953, 1963, "Abjudicated",
-  "Quechan Tribe", 1953, 1963, "Abjudicated",
+  "Colorado River Indian Tribes", 1953, 1963, "Adjudicated",
+  "Fort Mojave Indian Tribe", 1953, 1963, "Adjudicated",
+  "Quechan Tribe", 1953, 1963, "Adjudicated",
   "Ak-Chin Indian Community", 1974, 1978, "Fully",
   "Tohono O'odham Nation", 1975, 1982, "Partially",
   "Gila River Indian Community", 1976, 2005, "Fully",
@@ -248,10 +250,86 @@ water_rights <- tribble(
 )
 
 tribal_lands_water <- 
-  tribal_lands |>
-  left_join(water_rights, join_by(name == tribe)) |>
+  tribal_lands %>%
+  left_join(water_rights) %>%
   mutate(years = ifelse(is.na(recognized), 2024 - claim, 
-                              recognized - claim))
+                              recognized - claim),
+         res_color = case_when(
+           resolved == "Fully" | resolved == "Adjudicated" ~ "#127852",
+           resolved == "Partially" ~ "goldenrod",
+           resolved == "Unresolved" ~ "#C40233",
+           TRUE ~ "gray"
+         )) 
+```
+
+
+```{r}
+tribal_lands_water_reduced <- tribal_lands_water %>%
+  st_drop_geometry() %>%
+  select(tribe, url) %>%
+  distinct()
+
+tribal_lands_water_map <- 
+  tribal_lands_water %>%
+  group_by(tribe) %>%
+  summarize(geometry = st_union(geometry)) %>%
+  left_join(tribal_lands_water_reduced)
+
+tribal_map_all <- ggplot(az_map) +
+  geom_sf(fill = "#E7E4D9") +
+  geom_sf(data = rivers, color = "#8ca7c0", linewidth = 0.5) +
+  geom_sf(data = centralAZ, color = "#98A68F", linewidth = 0.5) +
+  geom_sf(data = lakes, fill = "#8ca7c0", color = "#8ca7c0", size = 1) +
+  geom_sf(data = tribal_lands_water_map, aes(fill = "#BA8172"), alpha = 0.5, color = "gray85", linewidth = 0.15) +
+  scale_fill_identity() +
+  coord_sf(clip = "off")
+
+tribe_plot_fcn <- function(tribal_lands_water_map, az_map, rivers, centralAZ, lakes) {
+  
+  # Transform the coordinate systems to a common CRS
+  tribal_mer <- tribal_lands_water_map %>% st_transform(crs = 3857)
+  az_map_mer <- az_map %>% st_transform(crs = 3857)
+  rivers_mer <- rivers %>% st_transform(crs = 3857)
+  centralAZ_mer <- centralAZ %>% st_transform(crs = 3857)
+  lakes_mer <- lakes %>% st_transform(crs = 3857)
+  
+  # Ensure geometries are valid
+  tribal_mer <- st_make_valid(tribal_mer)
+  
+  # Calculate the bounding box for each tribe area
+  tribe_bbox <- st_bbox(tribal_mer) %>% st_as_sfc()
+  tribe_name <- tribal_lands_water_map$tribe
+  
+  # Create the plot
+  gg <- 
+    (ggplot() +
+       geom_sf(data = az_map_mer, fill = "#E7E4D9") +
+       geom_sf(data = rivers_mer, color = "#8ca7c0", linewidth = 0.5) +
+       geom_sf(data = centralAZ_mer, color = "#98A68F", linewidth = 0.5) +
+       geom_sf(data = lakes_mer, fill = "#8ca7c0", color = "#8ca7c0", size = 1) +
+       geom_sf(data = tribal_mer, aes(fill = "#BA8172"), alpha = 0.5, color = "gray85", linewidth = 0.15) +
+       scale_fill_identity() +
+       coord_sf(
+         xlim = st_coordinates(tribe_bbox)[c(1,3),1], # min & max of x values
+         ylim = st_coordinates(tribe_bbox)[c(2,4),2]) + # min & max of y values
+       theme_void() +
+       theme(
+         legend.position = 'none',
+         panel.background = element_rect(fill = 'transparent', color = NA),
+         plot.background = element_rect(fill = 'transparent', color = NA)))
+  
+  # Return the plot in a tibble
+  result <- tibble(tribe = tribe_name, plot = list(gg))
+  
+  return(result)
+}
+
+# Apply the function to each group and integrate into reactable
+tribal_maps <- 
+  map_dfr(
+    .x = group_split(tribal_lands_water_map, tribe),
+    .f = ~tribe_plot_fcn(tribal_lands_water_map = .x, az_map = az_map, rivers = rivers, centralAZ = centralAZ, lakes = lakes)
+  )
 ```
 
 ### Arizona Indigenous Tribal Boundaries
@@ -288,21 +366,12 @@ tribal_map <-
         legend.key.size = unit(1, "cm"),
         legend.position = "left",
         legend.justification = "top",
-        plot.caption = element_text(color = "lightgray"))
+        plot.caption = element_text(color = "gray80"))
 
 girafe(ggobj = tribal_map)
 ```
 
 ```{r}
-#> Title: DSI Event Registrants/Attendees Analyses - Tables
-#> Author: Greg Chism
-#> Date: 2023-03-14
-#> Description: 
-#> This script performs the following purposes:
-#> 1. Import registrant/attendee raw data
-#> 2. Wrangle raw data into final data for registrant/attendee UA position and UA department
-#> 3. Create HTML tables for UA position and UA college affiliation
-
 # Install & load required packages
 if (!require(pacman)) install.packages('pacman')
 
@@ -313,55 +382,196 @@ p_load(here,          # for standardized file paths
        tidyverse)     # for data wrangling
 
 tribal_lands_water_agg <- 
-  tribal_lands_water |>
+  tribal_lands_water %>%
   # Group data by columns
-  group_by(name, url, years, flag_url) |>
+  group_by(tribe, url, years, flag_url, resolved, res_color) %>%
   # Create a percentage column, rounded to two decimal points
-  summarise(land = sum(aland) / (1000^2),
-            water = sum(awater) / (1000^2),
-            pop = sum(pop),
-            .groups = "drop")
+  summarise(
+    combined_names = if (n_distinct(name) > 1) 
+      {paste("+", name[name != tribe], collapse = ", <br>")
+      } 
+    else {
+      ""
+    },
+    land = sum(aland) / (1000^2),
+    water = sum(awater) / (1000^2),
+    pop = sum(pop),
+    .groups = "drop") |>
+  mutate(combined_names = ifelse(combined_names != "",
+                                 paste0("<div style='font-size: 0.6rem; color: #777;'>", combined_names,
+                                        "</div>"),
+                                 combined_names))
+
+# Create a styled header
+header_content <- tags$div(
+  tags$link(
+    href = "https://fonts.googleapis.com/css2?family=Bungee&family=Montserrat:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap", 
+    rel = "stylesheet"
+  ),
+  tags$div(
+    tags$div(
+      "Waiting for Water", 
+      style = css(
+        'font-size' = '50pt', 
+        'font-weight' = 'bold', 
+        'font-family' = 'Bungee', 
+        'text-align' = 'left',
+        'margin-bottom' = 0,
+        'padding-left' = '10px',
+        'vertical-align' = 'middle'
+      )
+    ),
+    tags$div(
+      "Investigating Arizona Tribal Water Rights", 
+      style = css(
+        'font-family' = 'Montserrat',
+        'margin-bottom' = 0,
+        'margin-top' = 0,
+        'font-size' = '28pt',
+        'text-align' = 'left',
+        color = '#8C8C8C',
+        'padding-left' = '10px'
+      )
+    ),
+    tags$div(
+      "...or a lack thereof", 
+      style = css(
+        'font-family' = 'Montserrat',
+        'margin-bottom' = 0,
+        'margin-top' = 0,
+        'font-size' = '18pt',
+        'text-align' = 'left',
+        color = '#8C8C8C',
+        'padding-left' = '10px'
+      )
+    ),
+    style = css(width = '70%')
+  ),
+  tags$div(
+    plotTag(
+      tribal_map_all,
+      alt = "Map of all Arizona Tribes",
+      height = 200
+    ),
+    style = css(width = '30%')
+  ),
+  style = css(
+    width = '1250px',
+    display = 'inline-flex',
+    'align-items' = 'center',
+    'justify-content' = 'space-between'
+  )
+)
+
+footer_content <- 
+  tags$div(
+    tags$link(
+      href = "https://fonts.googleapis.com/css2?family=Bungee&family=Montserrat:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap", 
+      rel = "stylesheet"
+    ),
+    tags$div(
+      tags$sup("*"), 
+      "Kaibab Band of Paiute Indians has not filed a water claim yet.",
+      tags$br(),
+      tags$sup("1"), 
+      "The Winters Doctrine, from the 1908 Supreme Court case ",
+      tags$a(
+        href = "https://en.wikipedia.org/wiki/Winters_v._United_States#:~:text=Winters%20v.%20United%20States%2C%20207%20U.S.%20564%20%281908%29%2C,cases%20where%20the%20rights%20were%20not%20clear.%20",
+        target = "_blank",
+        tags$i("Winters v. United States")
+      ),
+      ", established that Native American tribes have reserved water rights when reservations are created. These rights are considered to have a priority date corresponding to the establishment date of the reservation, making them senior to many other water rights.",
+      tags$br(),
+      tags$sup("2"),
+      "Adjudicated Water Rights resulted from the set of United States Supreme Court cases.",
+      tags$a(
+        href = "https://en.wikipedia.org/wiki/Arizona_v._California",
+        target = "_blank",
+        tags$i("Arizona v. California")
+      ),
+      ", which all deal with disputes over water distribution from the Colorado River between the states of Arizona and California.",
+      style = css(
+        display = 'inline-block',
+        'text-align' = 'left',
+        'font-family' = 'Montserrat',
+        color = 'black', 
+        'font-size' = '9pt',
+        'border-bottom-style' = 'solid',
+        'border-top-style' = 'solid',
+        width = '1250px',
+        'padding-bottom' = '8px',
+        'padding-top' = '8px',
+        'padding-left' = '10px',
+        'border-color' = '#DADADA'
+      )
+    ),
+    tags$div(
+      "Data Sources: Wikipedia, US Census Bureau, ProPublica.org, and AZ Geo Data Hub | ",
+      shiny::icon("github"), 
+      tags$a("Gchism94", href = "https://github.com/Gchism94", target = "_blank"),
+      style = css(
+        display = 'inline-block', 
+        'vertical-align' = 'middle',
+        'text-align' = 'left',
+        'font-family' = 'Montserrat', 
+        color = '#8C8C8C', 
+        'font-size' = '10pt', 
+        width = '1250px', 
+        'padding-top' = '8px', 
+        'padding-left' = '10px'
+      )
+    )
+  )
 
 # HTML tables for UA position and UA department affiliation
-#indigenousGeneralTable <- 
-  tribal_lands_water_agg |>
-    st_drop_geometry() |>
-    mutate(tribe = ifelse(name == "Kaibab-Paiute Tribe",
-                          paste0("<a href='", url, "'>", name, "*", "</a>"),
-                          paste0("<a href='", url, "'>", name, "</a>")),
-           ) |>
-    select(-c(url, name)) |>
-    relocate(flag_url, .before = years) |>
-    relocate(pop, .after = years) |>
-    relocate(tribe, .before = flag_url) |>
+tribes_table <- 
+  tribal_lands_water_agg %>%
+    st_drop_geometry() %>%
+    mutate(tribe = ifelse(tribe == "Kaibab-Paiute Tribe",
+                          paste0("<a href='", url, "'>", tribe, "</a>", "*", "<br>", combined_names),
+                          paste0("<a href='", url, "'>", tribe, "</a>", "<br>", combined_names)),
+           map = NA
+           ) %>%
+    select(-c(url)) %>%
+    relocate(flag_url, .before = years) %>%
+    relocate(tribe, .before = flag_url) %>%
+    relocate(resolved, .after = years) %>%
+    relocate(pop, .after = resolved) %>%
   # Reactable argument
   reactable(
     # Clean theme with base font size 16pt
     theme = reactableTheme(
       style = list(fontSize = "1rem",
-                   fontFamily = "Lato, sans-serif")
+                   fontFamily = "Montserrat, sans-serif")
     ),
     width = 1250,
     # Default table sort by years column
     defaultSorted = "years",
     # Default sort order descending
     defaultSortOrder = "desc",
-    # Default page size 10 rows
-    defaultPageSize = 10,
+    defaultColDef = colDef(
+      vAlign = "center",
+      align = "center",
+      headerVAlign = "center",
+      html = TRUE,
+      ),
     # Columns list
     columns = list(
-      # name column
+      # tribe column
       tribe = colDef(maxWidth = 250,
                     name = "Tribe",
+                    align = "left",
                     html = TRUE),
       
+      combined_names = colDef(show = FALSE), 
+      
       flag_url = colDef(name = '',
-                        maxWidth = 80,
+                        maxWidth = 65,
                         sortable = FALSE,
-                        style = background_img(height = "120%", width = "100%")
+                        style = background_img(height = "100%", width = "95%")
         ),
       # pop column
-      pop = colDef(maxWidth = 120,
+      pop = colDef(maxWidth = 130,
                    name = "Population",
                    align = 'center',
                     cell = color_tiles(
@@ -377,7 +587,7 @@ tribal_lands_water_agg <-
                     name = "Land",
                     align = 'center',
                     cell = color_tiles(
-                      data = tribal_lands_water_agg,
+                      data = .,
                       number_fmt = scales::comma_format(accuracy = 1),
                       colors = paletteer::paletteer_c("ggthemes::Classic Area-Brown", 30)
                     ),
@@ -392,7 +602,7 @@ tribal_lands_water_agg <-
                      name = "Water",
                      align = 'center',
                      cell = color_tiles(
-                      data = tribal_lands_water_agg,
+                      data = .,
                       number_fmt = scales::comma_format(accuracy = 1),
                       colors = RColorBrewer::brewer.pal(5, 'Blues')
                      ),
@@ -404,11 +614,12 @@ tribal_lands_water_agg <-
       
       # years column
       years = colDef(
-        name = 'Years until water rights after filing',
+        name = 'Years until water rights after filing<sup>1</sup>',
         align = 'left',
-        maxWidth = 300,
+        maxWidth = 325,
+        html = TRUE,
         cell = data_bars(
-          data = tribal_lands_water_agg,
+          data = .,
           fill_color = MetBrewer::met.brewer('Tsimshian', type = "continuous", direction = -1),
           text_position = 'none',
           box_shadow = TRUE,
@@ -418,18 +629,48 @@ tribal_lands_water_agg <-
           bar_height = 4,
           background = 'transparent',
           round_edges = TRUE,
-          tooltip = TRUE
+          tooltip = TRUE,
         )
+      ),
+      resolved = colDef(
+        name = "Water Rights <sup>2</sup>",
+        minWidth = 65,
+        html = TRUE,
+        header = JS('function(column) {
+        return column.name + `<div style="color: #737373; font-size: 0.8rem;">Status</div>`
+      }'),
+        cell = pill_buttons(
+          data = .,
+          color_ref = 'res_color',
+          box_shadow = TRUE
+        )
+        ),
+      res_color = colDef(show = FALSE),
+      map = colDef(
+        name = "Tribal Map",
+        cell = function(value, index){
+          htmltools::plotTag(
+            tribal_maps$plot[[index]],
+            alt = 'plots',
+            height = 50,
+            width = 50,
+            deviceArgs = list(bg = 'transparent'))
+          },
+        width = 150
       )
     )
-  )
+    )
 
-  # Set google font, Roboto Condensed
-  #google_font(font_family = "Roboto Condensed") |>
-  # Set title and font size
-  #add_title("UArizona positions reached by each DSI event", font_size = 21) |>
-  # Set subtitle
-  #add_subtitle("The % of each University of Arizona position that was represented by registrants from each DSI event, rounded to the nearest 1%. Data are grouped by academic semester.", font_size = 15)
+  # Combine the header and the reactable in a single HTML structure
+full_page <- tags$div(
+  header_content,
+  tribes_table,
+  footer_content,
+  style = css('width' = '100%')
+)
+
+# Render the full page
+htmltools::browsable(full_page)
 
 # Save interactive HTML table
 #save_html(positionRegistTable, "reports/tables/dsiRegistrantPosition.html")
