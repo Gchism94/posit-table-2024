@@ -257,7 +257,7 @@ tribal_lands_water <-
          res_color = case_when(
            resolved == "Fully" | resolved == "Adjudicated" ~ "#127852",
            resolved == "Partially" ~ "goldenrod",
-           resolved == "Unresolved" ~ "#C40233",
+           resolved == "Unresolved" ~ "firebrick",
            TRUE ~ "gray"
          )) 
 ```
@@ -398,14 +398,14 @@ tribal_lands_water_agg <-
     pop = sum(pop),
     .groups = "drop") |>
   mutate(combined_names = ifelse(combined_names != "",
-                                 paste0("<div style='font-size: 0.6rem; color: #777;'>", combined_names,
+                                 paste0("<div style='font-size: 0.55rem; color: #777;'>", combined_names,
                                         "</div>"),
                                  combined_names))
 
 # Create a styled header
 header_content <- tags$div(
   tags$link(
-    href = "https://fonts.googleapis.com/css2?family=Bungee&family=Montserrat:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap", 
+    href="https://fonts.googleapis.com/css2?family=Bungee&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Nothing+You+Could+Do&family=Permanent+Marker&display=swap",
     rel = "stylesheet"
   ),
   tags$div(
@@ -422,7 +422,7 @@ header_content <- tags$div(
       )
     ),
     tags$div(
-      "Investigating Arizona Tribal Water Rights", 
+      "Arizona Indigenous Tribal Water Rights", 
       style = css(
         'font-family' = 'Montserrat',
         'margin-bottom' = 0,
@@ -436,12 +436,12 @@ header_content <- tags$div(
     tags$div(
       "...or a lack thereof", 
       style = css(
-        'font-family' = 'Montserrat',
+        'font-family' = 'Permanent Marker',
         'margin-bottom' = 0,
         'margin-top' = 0,
         'font-size' = '18pt',
         'text-align' = 'left',
-        color = '#8C8C8C',
+        color = 'firebrick',
         'padding-left' = '10px'
       )
     ),
