@@ -6,7 +6,7 @@
 
 ![](output/tribal_lands_water.png)
 
-#### Tutorial/Walkthrough
+### Tutorial/Walkthrough
 
 The steps and final table are published in this repo's [GitHub Page](https://gchism94.github.io/posit-table-2024/). 
 
