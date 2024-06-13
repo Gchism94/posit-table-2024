@@ -31,8 +31,10 @@ Important steps:
     └── Cen_AZ_Proj/
         ├── Cen_AZ_Proj.shp                              # Shapefile for The Central Arizona Project
         └── ...                                          # Supporting files necessary for utilizing the Shapefile
+    
     output/                                              # location of the final table produced by index.qmd in R/
     ├── tribal_lands_water.html                          # Final table HTML
     └── tribal_lands_water.html                          # Final table PNG
+    
     R/                  
     └── index.qmd                                        # Tutorial/write-up for the project
