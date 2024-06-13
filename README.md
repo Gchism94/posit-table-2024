@@ -9,13 +9,18 @@
 #### Tutorial/Walkthrough
 
 The steps and final table are published in this repo's [GitHub Page](https://gchism94.github.io/posit-table-2024/). 
-Important steps:
-1. Creating a complex map plot - both interactive via {ggiraph} + {ggplot2} and static via only {ggplot2}.
-2. Creating a function to generate AZ Indigenous Tribal subplot maps (inspired by the 2022 Posit Table Contest Submission by [@jfangmeier](https://github.com/jfangmeier/table-contest-2022/tree/main)).
-3. Creating Header and Footer content for the main table.
-4. Creating the main table with {reactable} and {reactablefmtr}. 
 
-## File Organization
+**Important steps**:
+
+1. Creating a complex map plot - both interactive via {[ggiraph](https://davidgohel.github.io/ggiraph/)} + {[ggplot2](https://ggplot2.tidyverse.org/)} and static via only {ggplot2}.
+
+2. Creating a function to generate AZ Indigenous Tribal subplot maps (inspired by the 2022 Posit Table Contest Submission by [@jfangmeier](https://github.com/jfangmeier/table-contest-2022/tree/main)).
+
+3. Creating Header and Footer content for the main table.
+
+4. Creating the main table with {[reactable](https://glin.github.io/reactable/index.html)} and {[reactablefmtr](https://kcuilla.github.io/reactablefmtr/index.html)}. 
+
+### File Organization
 
     data/
     |
