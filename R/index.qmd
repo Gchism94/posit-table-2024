@@ -21,8 +21,6 @@ categories:
   - Tables
   - Indigenous Rights
   - "#2024PositTableContest"
-license: "CC BY-SA"
-copyright: "Copyright Greg Chism 2024. Made with Quarto and 💛"
 ---
 
 ::: callout-important
