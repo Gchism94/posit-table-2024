@@ -1,0 +1,1076 @@
+---
+title: Arizona Indigenous Tribal Water Rights
+author: 
+  - name: Dr. Greg Chism
+    affiliations:
+      - name: School of Information, University of Arizona
+description: Examination of US federally recognized indigenous tribes in AZ, with respect to their water rights...or lack thereof
+format:
+  html:
+    theme: cosmo
+    code-tools: true
+    code-line-numbers: true
+execute: 
+  warning: false
+  message: false
+  error: false
+toc: true
+code-annotations: hover
+categories: 
+  - DataViz
+  - Tables
+  - Indigenous Rights
+  - "#2024PositTableContest"
+license: "CC BY-SA"
+copyright: "Copyright Greg Chism 2024. Made with Quarto and 💛"
+---
+
+::: callout-important
+Throughout this project I personally use the term "**Indigenous**" and "**Tribal**" to refer to the Indigenous Peoples that lived in pre-colonial North America. The U.S. Census Bureau uses the term "**American Indian**" (a term some Indigenous Peoples also prefer), and subsequently many of the Federally Recognized Tribal Reservations use this term. It is not my wish to create or follow prejudice against Indigenous Peoples through this project, as it was meant only as a learning resource. Any concerns about the content of this project will lead to its immediate correction or complete removal.
+:::
+
+## 0 - Set up
+
+I used several packages for this project, most of which related to plotting maps with {[ggplot2](https://ggplot2.tidyverse.org/)} or creating interactive/reactive tables with {[reactable](https://glin.github.io/reactable/index.html)} and {[reactablefmtr](https://kcuilla.github.io/reactablefmtr/index.html)}.
+
+```{r}
+#| label: load-packages
+#| message: false
+#| output: false
+#| code-fold: true
+#| code-summary: "Packages installed"
+if(!require(pacman))
+  install.packages("pacman")
+
+pacman::p_load(here,
+               htmltools,
+               lwgeom,
+               tidyverse,
+               tigris,
+               sf,
+               ggtext,
+               ggrepel,
+               ggiraph,
+               glue,
+               readxl,
+               janitor,
+               reactable,     # for HTML tables
+               reactablefmtr, # for easier formatting reactable tables
+               scales,
+               patchwork,
+               usmap,
+               webshot2)
+
+webshot::install_phantomjs()
+
+# Options to use tigris datasets with sf
+options(tigris_use_cache = TRUE, tigris_class = "sf")
+```
+
+Setting the default theme ggplot and output options for the project.
+
+```{r}
+#| label: set_theme
+#| code-fold: true
+#| code-summary: "Theme Settings"
+# setting theme for ggplot2
+ggplot2::theme_set(cowplot::theme_map())
+
+# setting figure parameters for knitr
+knitr::opts_chunk$set(
+  fig.width = 8,        # 8" width
+  fig.asp = 0.65,       # the golden ratio
+  fig.retina = 1,       # dpi multiplier for displaying HTML output on retina
+  fig.align = "center", # center align figures
+  dpi = 350,            # higher dpi, sharper image
+  message = FALSE
+)
+```
+
+## 1 - Introduction
+
+**What is the status of Indigenous Tribal water rights in Arizona?**
+
+As both a resident of Arizona and a member of the University of Arizona (UArizona) faculty, I have been acutely aware of the influence of Indigenous Peoples and their culture. Arizona is home to 22 federally recognized tribes, and my city of residence, Tucson, is home to the O'odham and Yaqui tribed. The [UArizona Land Acknowledgemen](https://news.arizona.edu/news/uarizona-land-acknowledgement-illustrates-commitment-indigenous-students-communities?_gl=1*14kh3ed*_ga*JTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyOG5vdCUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjBzZXQlMjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI1MjUyNTI5*_ga_7PV3540XS3*MTcxODIxOTM5Mi4xMjMuMS4xNzE4MjE5NDI0LjI4LjAuMA..)t recognizes that the campus is on the land and territories of Indigenous Peoples, and as such strives to build sustainable relationships with sovereign Native Nations and Indigenous communities through education offerings, partnerships, and community service[^1].
+
+[^1]: Source: <https://humanrightspractice.arizona.edu/land-acknowledgement>
+
+Arizona is the sunniest state in the U.S., with an average of 5,755 kJ/m² in annual sunlight. In addition, there has been a +12.23% change in sunlight since 1992[^2]. Over the last 15 years, the Southwest has experience substantial drought, especially affecting the Colorado River[^3] and Lake Mead[^4]. The Colorado River supplies about 36% of Arizona's water. Whereas other sources are from groundwater, 41%; in-state rivers, 18%, and reclaimed water, 5%[^5]. Due to climate projections for the southwestern U.S., it is likely that Arizona's drought situation will only worsen over time[^6].
+
+[^2]: Source: <https://stacker.com/health/sunniest-states-us>, their data - <https://docs.google.com/document/d/1XB7a73g5oV8X-e5afV0Wcj_VKVRuKSn6t0Sb8yXdnao/edit#heading=h.swdolthc68cw>
+
+[^3]: Source: [usgs.gov](https://www.usgs.gov/tools/colorado-river-basin-drought-and-2023-water-year)
+
+[^4]: Though there has been substantial improvement in Lake Mead's water levels ([SOURCE](and%20Lake%20Mead%20Reservoirs)).
+
+[^5]: Source: [Kyl Center for Water Policy](https://morrisoninstitute.asu.edu/content/kyl-center-water-policy) at Arizona State University
+
+[^6]: Source: [Drought.gov](https://www.drought.gov/what-is-drought/historical-drought#:~:text=The%20three%20longest%20drought%20episodes%20occurred%20between%20July,1998%20and%20December%202014%20%28the%20early%2021st-century%20drought%29)
+
+Of the 22 federally recognized tribes in AZ, only 14 have either fully resolved, adjudicated rights, or partially resolved rights claims[^7]. In fact, Navajo Nation, the largest federally recognized tribe, only recently passed a proposed settlement that would ensure water rights for its tribe - a deal that has yet to be passed by Congress[^8]. What has taken so long? Legally, Indigenous Tribal users were left out of water rights decisions until 1908, when the Supreme Court ruled on the Winters Doctrine, a decision that guaranteed water rights to tribes[^9]. Since this landmark decision, tribes have had an uphill battle due in part to their sovereign nation status not being respected. In fact, Congress tried to abolish tribal governments, disband their reservations, and relocate residents to urban areas in 1953[^10]. In addition, tribes were forced to endure existential threats to their ways of life, such as fleeing boarding schools that wished to assimilate Indigenous Peoples into U.S. society[^11]. Due to this, 1978 was the year the Ak-Chin Indian Community (near Maricopa AZ) was the first tribe to settle water rights[^12]. As a result from this constant uphill battle, there are still 8 Arizona tribes with completely unresolved water rights.
+
+[^7]: Source: [cap-az.com](https://www.cap-az.com/about/tribal-water-rights/)
+
+[^8]: Source: [Associated Press](https://apnews.com/article/colorado-river-tribes-water-settlement-navajo-hopi-d8aaa65e7c5d04ef965763ea4bde5078), the deal would be the most expensive enacted by Congress.
+
+[^9]: Source: Wikipedia - [*Winters v. United States*](https://en.wikipedia.org/wiki/Winters_v._United_States)
+
+[^10]: Colloquially, a part the era of U.S. Indial termination policy: [Wikipedia](https://en.wikipedia.org/wiki/Indian_termination_policy).
+
+[^11]: American Indian boarding schools: [Wikipedia](https://en.wikipedia.org/wiki/American_Indian_boarding_schools).
+
+[^12]: [Public Law 95-328, 95th Congress](https://digitalrepository.unm.edu/cgi/viewcontent.cgi?article=1001&context=nawrs)
+
+## 2 - Data Import & Wrangling
+
+### 2.1 - Arizona shapefiles
+
+There were two sources for shapefiles used in this project:
+
+1.  AZ counties data from {[tigris](https://github.com/walkerke/tigris)}
+2.  University of Arizona Institutional Repository ([UAiR](https://uair.library.arizona.edu/item/292543/browse-data/Water)) for major Arizona rivers, lakes, and the Central Arizona Project.
+
+All column names were cleaned using `janitor::clean_names()`.
+
+```{r}
+#| label: load-sfs
+#| code-fold: true
+#| code-summary: Load and wrangle AZ shapefiles
+#| output: false
+# Download the shapefile for Arizona counties
+az_map <- states(cb = TRUE, progress = FALSE) %>%
+  clean_names() %>%
+  filter(name == "Arizona")
+
+# Import Arizona rivers shapefile
+rivers <- st_read(here("data", "azRivers", "Major_Rivers.shp")) %>% 
+  clean_names() %>%
+  st_transform(crs = st_crs(az_map))
+
+# Import Arizona lakes shapefile
+lakes <- st_read(here("data", "azLakes", "Major_Lakes.shp")) %>% 
+  clean_names() %>%
+  st_transform(crs = st_crs(az_map))
+
+# Import Central Arizona Project shapefile
+centralAZ <- st_read(here("data", "Cen_AZ_Proj", "Cen_AZ_Proj.shp")) %>% 
+  clean_names() %>%
+  st_transform(crs = st_crs(az_map))
+```
+
+### 2.2 - Arizona Indigenous Tribes
+
+The shapefile for Arizona Indigenous Tribes was sourced from the [Arizona Department of Health Services](https://geodata-adhsgis.hub.arcgis.com/datasets/american-indian-reservations-in-arizona/about). Several columns were added onto this original data:
+
+| Column   | Type      | Description                                                            | Source                                             |
+|------------------|------------------|------------------|------------------|
+| `tribe`  | Character | Standardized Tribal name                                               | [US Census Bureau](https://www.census.gov/tribal/) |
+| `pop`    | Numeric   | Population of Tribes (includes all reservations in and outside of AZ). | [US Census Bureau](https://www.census.gov/tribal/) |
+| `number` | Numeric   | Tribal Alphabetical Ranking                                            |                                                    |
+
+**Notable steps:**
+
+-   Reading `.shp` data from the data folder using `st_read` the {[sf](https://r-spatial.github.io/sf/)} package.
+-   Set the `crs` to `4269`, which is standard for US Census data
+-   Transform the `crs` to the same as the `az_counties_pop` to ensure its standardized.
+
+```{r}
+#| label: az_tribes
+#| code-fold: true
+#| code-summary: Load and wrangle AZ tribal shapefiles
+#| output: false
+tribal_lands <- st_read(here("data", "azTribes", "American_Indian_Reservations_in_Arizona.shp")) %>% 
+  clean_names()
+tribal_lands <- st_set_crs(tribal_lands, 4269)
+tribal_lands <- st_transform(tribal_lands, crs = st_crs(az_map))
+
+tribal_lands <- tribal_lands %>%
+  mutate(
+    tribe = case_when(
+      tribe = str_detect(name, "Ak-Chin") ~ "Ak-Chin Indian Community",
+      tribe = str_detect(name, "Hopi") ~ "Hopi Tribe",
+      tribe = str_detect(name, "Hualapai") ~ "Hualapai Tribe",
+      tribe = str_detect(name, "Navajo") ~ "Navajo Nation",
+      tribe = str_detect(name, "Pascua") ~ "Pascua Yaqui Tribe",	
+      tribe = str_detect(name, "Tohono") ~ "Tohono O'odham Nation",
+      tribe = str_detect(name, "Tonto Apache") ~ "Tonto Apache Tribe",
+      tribe = str_detect(name, "Yavapai-Apache") ~ "Yavapai-Apache Tribe",
+      TRUE ~ name
+    ),
+    url = case_when(
+      tribe == "Ak-Chin Indian Community" ~ "https://ak-chin.nsn.us/",
+      tribe == "Cocopah Indian Tribe" ~ "https://www.cocopah.com/",
+      tribe == "Colorado River Indian Tribes" ~ "https://www.crit-nsn.gov/",
+      tribe == "Fort McDowell Yavapai Nation" ~ "https://fmyn.org/",
+      tribe == "Fort Mojave Indian Tribe" ~ "https://www.fortmojaveindiantribe.com/",
+      tribe == "Gila River Indian Community" ~ "https://www.gilariver.org/",
+      tribe == "Havasupai Tribe" ~ "https://theofficialhavasupaitribe.com/",
+      tribe == "Hopi Tribe" ~ "https://www.hopi-nsn.gov/",
+      tribe == "Hualapai Tribe" ~ "https://hualapai-nsn.gov/",
+      tribe == "Kaibab-Paiute Tribe" ~ "https://www.kaibabpaiute-nsn.gov/",
+      tribe == "Navajo Nation" ~ "https://www.navajo-nsn.gov/",
+      tribe == "Pascua Yaqui Tribe" ~ "https://www.pascuayaqui-nsn.gov/",
+      tribe == "Pueblo of Zuni" ~ "https://www.ashiwi.org/",
+      tribe == "Quechan Tribe" ~ "https://www.quechantribe.com/index.html",
+      tribe == "Salt River Pima-Maricopa Indian Community" ~ "https://www.srpmic-nsn.gov/",
+      tribe == "San Carlos Apache Tribe" ~ "https://itcaonline.com/member-tribes/san-carlos-apache-tribe/",
+      tribe == "Tohono O'odham Nation" ~ "http://www.tonation-nsn.gov/",
+      tribe == "Tonto Apache Tribe" ~ "https://itcaonline.com/member-tribes/tonto-apache-tribe/",
+      tribe == "White Mountain Apache Tribe" ~ "http://www.wmat.us/",
+      tribe == "Yavapai-Apache Tribe" ~ "https://yavapai-apache.org/",
+      tribe == "Yavapai-Prescott Indian Tribe" ~ "https://ypit.com/",
+      TRUE ~ NA
+    ),
+    pop = case_when(
+      tribe == "Ak-Chin Indian Community" ~ 1450,
+      tribe == "Cocopah Indian Tribe" ~ 1158,
+      tribe == "Colorado River Indian Tribes" ~ 8385,
+      tribe == "Fort McDowell Yavapai Nation" ~ 1006,
+      tribe == "Fort Mojave Indian Tribe" ~ 1572,
+      tribe == "Gila River Indian Community" ~ 12179,
+      tribe == "Havasupai Tribe" ~ 730,
+      tribe == "Hopi Tribe" ~ 7895,
+      tribe == "Hualapai Tribe" ~ 1738,
+      tribe == "Kaibab-Paiute Tribe" ~ 249,
+      tribe == "Navajo Nation" ~ 166545,
+      tribe == "Pascua Yaqui Tribe" ~ 3678,
+      tribe == "Pueblo of Zuni" ~ 8134,
+      tribe == "Quechan Tribe" ~ 1536,
+      tribe == "Salt River Pima-Maricopa Indian Community" ~ 5949,
+      tribe == "San Carlos Apache Tribe" ~ 10204,
+      tribe == "Tohono O'odham Nation" ~ 10052,
+      tribe == "Tonto Apache Tribe" ~ 102,
+      tribe == "White Mountain Apache Tribe" ~ 14620,
+      tribe == "Yavapai-Apache Tribe" ~ 1085,
+      tribe == "Yavapai-Prescott Indian Tribe" ~ 551,
+      TRUE ~ NA
+    ),
+    name = ifelse(name == "Tohono O’odham Nation", "Tohono O'odham Nation", name),
+    number = dense_rank(name)) 
+
+```
+
+### 2.3 - Arizona Tribal Water Rights
+
+| Column       | Type      | Description                          | Source                                                                                                      |
+|------------------|------------------|------------------|------------------|
+| `tribe`      | Character | Standardized Tribal name             | [US Census Bureau](https://www.census.gov/tribal/)                                                          |
+| `claim`      | Numeric   | Water rights claim filing (year)     | [propublica.org](https://www.propublica.org/article/how-arizona-stands-between-tribes-and-their-water)[^13] |
+| `recognized` | Numeric   | Water rights claim recognized (year) | [propublica.org](https://www.propublica.org/article/how-arizona-stands-between-tribes-and-their-water)      |
+| `resolved`   | Character | Water rights claim status            | [cap-az.com](https://www.cap-az.com/about/tribal-water-rights/)                                             |
+
+[^13]: Dates for `claim` and `recognized` were derived using the image analysis software [*Fiji*](https://imagej.net/software/fiji/downloads), by calculating a standardized unit of distance, then calculating the length of time between known years and the tick on the graph.
+
+```{r}
+#| label: az_tribal_water_rights
+#| code-fold: true
+#| code-summary: Create AZ tribal water rights tribble
+water_rights <- tribble(
+  ~tribe, ~claim, ~recognized, ~resolved,
+  "Salt River Pima-Maricopa Indian Community", 1949, 1988, "Fully",
+  "Cocopah Indian Tribe", 1953, 1963, "Adjudicated",
+  "Colorado River Indian Tribes", 1953, 1963, "Adjudicated",
+  "Fort Mojave Indian Tribe", 1953, 1963, "Adjudicated",
+  "Quechan Tribe", 1953, 1963, "Adjudicated",
+  "Ak-Chin Indian Community", 1974, 1978, "Fully",
+  "Tohono O'odham Nation", 1975, 1982, "Partially",
+  "Gila River Indian Community", 1976, 2005, "Fully",
+  "Yavapai-Prescott Indian Tribe", 1978, 1995, "Fully",
+  "White Mountain Apache Tribe", 1979, 2010, "Fully",
+  "Fort McDowell Yavapai Nation", 1979, 1990, "Fully",
+  "Pueblo of Zuni", 1979, 2003, "Fully",
+  "Yavapai-Apache Tribe", 1979, NA, "Unresolved",
+  "San Carlos Apache Tribe", 1979, 1999, "Partially",
+  "Hualapai Tribe", 1985, 2014, "Fully",
+  "Hopi Tribe", 1985, NA, "Unresolved",
+  "Tonto Apache Tribe", 1985, NA, "Unresolved",
+  "Navajo Nation", 1985, NA, "Unresolved",
+  "Pascua Yaqui Tribe", 1987, NA, "Unresolved",
+  "San Juan Southern Paiute Tribe", 1991, NA, "Unresolved",
+  "Havasupai Tribe", 2016, NA, "Partially",
+  "Kaibab-Paiute Tribe", NA, NA, "Unresolved"
+)
+```
+
+### 2.4 - Joined Arizona Tribal data {#joined-arizona-tribal-data}
+
+| Column      | Type     | Description                                                               |
+|------------------|------------------|------------------------------------|
+| `years`     | Numeric  | Length of time (years) between water rights claim filing and recognition. |
+| `res_color` | Category | Hex color assigned to water rights status                                 |
+
+```{r}
+#| label: water_rights_status
+#| code-fold: true
+#| code-summary: Create water rights timeline and color
+tribal_lands_water <- 
+  tribal_lands %>%
+  left_join(water_rights) %>%
+  mutate(
+    years = case_when(
+      is.na(recognized) & !is.na(claim) ~ 2024 - claim,
+      is.na(recognized) & is.na(claim) ~ 0,
+      TRUE ~ recognized - claim
+      ),
+    res_color = case_when(
+      resolved == "Fully" | resolved == "Adjudicated" ~ "#127852",
+      resolved == "Partially" ~ "goldenrod",
+      resolved == "Unresolved" ~ "firebrick",
+      TRUE ~ "gray"
+      )
+    ) 
+```
+
+## 3 - Arizona Indigenous Tribal Boundaries {#arizona-indigenous-tribal-boundaries}
+
+Plotting AZ Indigenous Tribal boundaries from the az counties shapefile and the shapefile from AZGeo Data. There are a few noteworthy steps:
+
+1.  Utilizing five `geom_sf()` arguments - i. for the AZ counties, ii. for major AZ rivers, iii. for the Central Arizona Project, iv. for major AZ lakes, v. for the indigenous regions.
+2.  Utilizing `geom_label_repel_interactive()` to create interactive labels (tooltips).
+3.  Utilizing `scale_fill_identity()` to fill the tribal land geometry and give it a custom legend.
+
+::: callout-note
+This visual is inspired by the ProPublica article "[How Arizona Stands Between Tribes and Their Water](https://www.propublica.org/article/how-arizona-stands-between-tribes-and-their-water)".
+:::
+
+```{r}
+#| label: interactive_az_map
+#| code-fold: true
+#| code-summary: Create interactive AZ map
+tribal_map <-
+  ggplot(az_map) +
+  geom_sf(fill = "#E7E4D9") +
+  geom_sf(data = rivers, color = "#8ca7c0", linewidth = 0.5) +
+  geom_sf(data = centralAZ, color = "#98A68F", linewidth = 0.5) +
+  geom_sf(data = lakes, fill = "#8ca7c0", color = "#8ca7c0", size = 1) +
+  geom_sf(data = tribal_lands_water, aes(fill = "#BA8172"), alpha = 0.5, color = "gray85", linewidth = 0.15) +
+  geom_label_repel_interactive(
+    data = tribal_lands_water,
+    aes(label = number, geometry = geometry, 
+        tooltip = paste0("<a href='", url, "'>", name, "</a>\n"),
+        onclick = paste0('window.open("', url , '")')),
+    stat = "sf_coordinates",
+    min.segment.length = 0,
+    force = 16) +
+  scale_fill_identity(guide = "legend", labels = "Federally Recognized Tribal\nReservations and Trust Land") +
+  labs(title = "Federally Recognized Tribal Reservations and Trust Land\nin Arizona",
+       x = "Longitude",
+       y = "Latitude",
+       caption = "Source: Shapefile obtained using {tigris} R package, v2.0.1\nIndigenous Tribe Shapefile obtained from AZGeo Data\nWater body data obtained from UAiR",
+       fill = NULL) +
+  coord_sf(clip = "off") +
+  theme(plot.title.position = "plot",
+        legend.key.size = unit(1, "cm"),
+        legend.position = "left",
+        legend.justification = "top",
+        plot.caption = element_text(color = "gray80"))
+
+girafe(ggobj = tribal_map)
+```
+
+## 4 - Create AZ Tribal Subplots
+
+::: callout-note
+This approach was inspired by the 2022 Posit Table Contest Runner Up: "[All Aboard! Exploring the Amtrak Passenger Rail System](https://joshfangmeier.quarto.pub/table-contest-2022/)".
+:::
+
+### 4.1 - Create the Combined AZ Static Map
+
+There are several notable steps:
+
+1.  Reduce the `tribal_lands_water` dataset from [step 2.4](#joined-arizona-tribal-data).
+2.  Combine the `geometry` columns using `st_union` in the `tribal_lands_water_map` dataset.
+    1.  Then `left_join()` the new `tribal_lands_water_reduced` dataset to the `tribal_lands_water_map` data.
+3.  Create a full map plot combining the Arizona Map, Major Rivers, Central Arizona Project, Major Lakes, and AZ Tribal Boundaries shapefiles (similar to the approach in [step 3](#arizona-indigenous-tribal-boundaries)).
+
+```{r}
+#| label: static_az_map
+#| code-fold: true
+#| code-summary: Create static AZ map
+tribal_lands_water_reduced <- tribal_lands_water %>%
+  st_drop_geometry() %>%
+  select(tribe, url) %>%
+  distinct()
+
+tribal_lands_water_map <- 
+  tribal_lands_water %>%
+  group_by(tribe) %>%
+  summarize(geometry = st_union(geometry)) %>%
+  left_join(tribal_lands_water_reduced)
+
+tribal_map_all <- ggplot(az_map) +
+  geom_sf(fill = "#E7E4D9") +
+  geom_sf(data = rivers, color = "#8ca7c0", linewidth = 0.5) +
+  geom_sf(data = centralAZ, color = "#98A68F", linewidth = 0.5) +
+  geom_sf(data = lakes, fill = "#8ca7c0", color = "#8ca7c0", size = 1) +
+  geom_sf(data = tribal_lands_water_map, aes(fill = "#BA8172"), alpha = 0.5, color = "gray85", linewidth = 0.15) +
+  scale_fill_identity() +
+  coord_sf(clip = "off")
+
+tribal_map_all
+```
+
+### 4.2 - Function: `tribe_plot_fcn`
+
+This function creates a plot for given geographic data, specifically focusing on tribal lands and surrounding features in Arizona.
+
+**Parameters**:
+
+-   `tribal_lands_water_map`: Spatial data for tribal lands and water.
+
+-   `az_map`: Spatial data for the map of Arizona.
+
+-   `rivers`: Spatial data for rivers.
+
+-   `centralAZ`: Spatial data for central Arizona.
+
+-   `lakes`: Spatial data for lakes.
+
+**Steps**:
+
+1.  Convert the coordinate systems of all input spatial datasets to the common CRS (Coordinate Reference System) with EPSG code 3857.
+
+2.  Validate the geometries in the transformed tribal lands data.
+
+3.  Calculate the bounding box for the tribal lands to determine the plotting area.
+
+4.  Use `ggplot2` to create a plot with multiple layers, including the map of Arizona, rivers, central Arizona, lakes, and tribal lands. Customize the appearance and set the coordinate limits based on the bounding box.
+
+5.  Return the plot in a tibble, associating it with the tribe name.
+
+```{r}
+#| label: tribe_plot_fcn
+#| code-fold: true
+#| code-summary: Create tribal subplot function
+tribe_plot_fcn <- function(tribal_lands_water_map, az_map, rivers, centralAZ, lakes) {
+  
+  # Transform the coordinate systems to a common CRS
+  tribal_mer <- tribal_lands_water_map %>% st_transform(crs = 3857)
+  az_map_mer <- az_map %>% st_transform(crs = 3857)
+  rivers_mer <- rivers %>% st_transform(crs = 3857)
+  centralAZ_mer <- centralAZ %>% st_transform(crs = 3857)
+  lakes_mer <- lakes %>% st_transform(crs = 3857)
+  
+  # Ensure geometries are valid
+  tribal_mer <- st_make_valid(tribal_mer)
+  
+  # Calculate the bounding box for each tribe area
+  tribe_bbox <- st_bbox(tribal_mer) %>% st_as_sfc()
+  tribe_name <- tribal_lands_water_map$tribe
+  
+  # Create the plot
+  gg <- 
+    (ggplot() +
+       geom_sf(data = az_map_mer, fill = "#E7E4D9") +
+       geom_sf(data = rivers_mer, color = "#8ca7c0", linewidth = 0.5) +
+       geom_sf(data = centralAZ_mer, color = "#98A68F", linewidth = 0.5) +
+       geom_sf(data = lakes_mer, fill = "#8ca7c0", color = "#8ca7c0", size = 1) +
+       geom_sf(data = tribal_mer, aes(fill = "#BA8172"), alpha = 0.5, color = "gray85", linewidth = 0.15) +
+       scale_fill_identity() +
+       coord_sf(
+         xlim = st_coordinates(tribe_bbox)[c(1,3),1], # min & max of x values
+         ylim = st_coordinates(tribe_bbox)[c(2,4),2]) + # min & max of y values
+       theme_void() +
+       theme(
+         legend.position = 'none',
+         panel.background = element_rect(fill = 'transparent', color = NA),
+         plot.background = element_rect(fill = 'transparent', color = NA)))
+  
+  # Return the plot in a tibble
+  result <- tibble(tribe = tribe_name, plot = list(gg))
+  
+  return(result)
+}
+```
+
+**Applying the Function**:
+
+The function `tribe_plot_fcn` is applied to each group of tribal lands data, and the results are combined into a single tibble for use in a `reactable`.
+
+**Steps**:
+
+1.  Split the `tribal_lands_water_map` data into groups based on the `tribe` attribute.
+
+2.  Apply the `tribe_plot_fcn` function to each group of data using `map_dfr`, which combines the results into a single data frame.
+
+This process results in a tibble (`tribal_maps`) where each row contains a tribe's name and its corresponding plot, ready for integration into a `reactable`.
+
+```{r}
+#| label: tribe_plot_fcn_appln
+#| code-fold: true
+#| code-summary: Apply tribal subplot function
+# Apply the function to each group and integrate into reactable
+tribal_maps <- 
+  map_dfr(
+    .x = group_split(tribal_lands_water_map, tribe),
+    .f = ~tribe_plot_fcn(tribal_lands_water_map = .x, az_map = az_map, rivers = rivers, centralAZ = centralAZ, lakes = lakes)
+  )
+```
+
+## 5 - Create the Final Table
+
+### 5.1 - Data Aggregation and Processing
+
+**Aggregation and Mutation:**
+
+1.  Group the `tribal_lands_water` data by `tribe`, `url`, `years`, `resolved`, and `res_color`.
+
+```{r}
+#| eval: false
+#| label: group_data_columns
+#| code-fold: true
+#| code-summary: Group data by columns
+tribal_lands_water_agg <- 
+  tribal_lands_water %>%
+  group_by(tribe, url, years, resolved, res_color)
+```
+
+2.  Summarize the data to create new columns:
+
+    -   `combined_names`: Combine distinct names that are not equal to the tribe name.
+
+    -   `land`: Sum of `aland` (land area) divided by 1,000,000 to convert to square kilometers.
+
+    -   `water`: Sum of `awater` (water area) divided by 1,000,000 to convert to square kilometers.
+
+    -   `pop`: Sum of the population.
+
+```{r}
+#| eval: false
+#| label: summarise_data
+#| code-fold: true
+#| code-summary: Summarise data
+summarise(
+  combined_names = if (n_distinct(name) > 1) 
+  {paste("+", name[name != tribe], collapse = ", <br>")
+    } 
+  else {
+    ""
+    },
+  land = sum(aland) / (1000^2),
+  water = sum(awater) / (1000^2),
+  pop = sum(pop),
+  .groups = "drop")
+```
+
+3.  Modify the `combined_names` column to include HTML styling if it's not empty.
+
+```{r}
+#| eval: false
+#| label: mutate_data
+#| code-fold: true
+#| code-summary: Mutate columns
+mutate(combined_names = ifelse(combined_names != "",
+                               paste0("<div style='font-size: 0.55rem; color: #777;'>",
+                                      combined_names,
+                                      "</div>"),
+                               combined_names)
+       )
+```
+
+### 5.2 - Header Content Creation
+
+1.  Add links to external fonts from Google Fonts.
+
+```{r}
+#| eval: false
+#| label: google_fonts
+#| code-fold: true
+#| code-summary: Header Google Fonts
+header_content <- tags$div(
+  tags$link(
+    href="https://fonts.googleapis.com/css2?family=Bungee&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900&family=Nothing+You+Could+Do&family=Permanent+Marker&display=swap",
+    rel = "stylesheet"
+    )
+```
+
+2.  Define the main title and subtitles with specific styling.
+
+```{r}
+#| eval: false
+#| label: title_subtitles
+#| code-fold: true
+#| code-summary: Create Title and Subtitles
+tags$div(
+  tags$div(
+    "Waiting for Water", 
+    style = css(
+      'font-size' = '50pt', 
+      'font-weight' = 'bold', 
+      'font-family' = 'Bungee', 
+      'text-align' = 'left',
+      'margin-bottom' = 0,
+      'padding-left' = '10px',
+      'vertical-align' = 'middle'
+    )
+  ),
+  tags$div(
+    "Arizona Indigenous Tribal Water Rights", 
+    style = css(
+      'font-family' = 'Montserrat',
+      'margin-bottom' = 0,
+      'margin-top' = 0,
+      'font-size' = '28pt',
+      'text-align' = 'left',
+      color = '#8C8C8C',
+      'padding-left' = '10px'
+    )
+  ),
+  tags$div(
+    "...or a lack thereof", 
+    style = css(
+      'font-family' = 'Permanent Marker',
+      'margin-bottom' = 0,
+      'margin-top' = 0,
+      'font-size' = '18pt',
+      'text-align' = 'left',
+      color = 'firebrick',
+      'padding-left' = '10px'
+    )
+  ),
+  style = css(width = '70%')
+```
+
+3.  Include a map of all Arizona tribes.
+
+```{r}
+#| eval: false
+#| label: map_image
+#| code-fold: true
+#| code-summary: Add the map plot
+tags$div(
+  plotTag(
+    tribal_map_all,
+    alt = "Map of all Arizona Tribes",
+    height = 200
+  ),
+  style = css(width = '30%')
+)
+```
+
+4.  Combine the title, subtitles, and map in a styled header container.
+
+```{r}
+#| eval: false
+#| label: style_header
+#| code-fold: true
+#| code-summary: Style the header
+style = css(
+  width = '1250px',
+  display = 'inline-flex',
+  'align-items' = 'center',
+  'justify-content' = 'space-between'
+)
+```
+
+### 5.3 - Footer Content Creation
+
+1.  Add links to external fonts from Google Fonts.
+
+```{r}
+#| eval: false
+#| label: google_font_1
+#| code-fold: true
+#| code-summary: Footer Google Fonts
+footer_content <- 
+  tags$div(
+    tags$link(
+      href = "https://fonts.googleapis.com/css2?family=Bungee&family=Montserrat:ital,wght@0,100;0,300;0,400;0,700;0,900&1,100;1,300;1,400;1,700;1,900&display=swap", 
+      rel = "stylesheet"
+    )
+  )
+```
+
+2.  Include information about specific tribes and legal doctrines related to water rights.
+
+```{r}
+#| eval: false
+#| label: info_text
+#| code-fold: true
+#| code-summary: Add informational text
+tags$div(
+  tags$sup("*"), 
+  "Kaibab Band of Paiute Indians has not filed a water claim yet.",
+  tags$br(),
+  tags$sup("1"), 
+  "The Winters Doctrine, from the 1908 Supreme Court case ",
+  tags$a(
+    href = "https://en.wikipedia.org/wiki/Winters_v._United_States#:~:text=Winters%20v.%20United%20States%2C%20207%20U.S.%20564%20%281908%29%2C,cases%20where%20the%20rights%20were%20not%20clear.%20",
+    target = "_blank",
+    tags$i("Winters v. United States")
+  ),
+  ", established that Native American tribes have reserved water rights when reservations are created. These rights are considered to have a priority date corresponding to the establishment date of the reservation, making them senior to many other water rights.",
+  tags$br(),
+  tags$sup("2"),
+  "Adjudicated Water Rights resulted from the set of United States Supreme Court cases.",
+  tags$a(
+    href = "https://en.wikipedia.org/wiki/Arizona_v._California",
+    target = "_blank",
+    tags$i("Arizona v. California")
+  ),
+  ", which all deal with disputes over water distribution from the Colorado River between the states of Arizona and California.",
+  style = css(
+    display = 'inline-block',
+    'text-align' = 'left',
+    'font-family' = 'Montserrat',
+    color = 'black', 
+    'font-size' = '9pt',
+    'border-bottom-style' = 'solid',
+    'border-top-style' = 'solid',
+    width = '1250px',
+    'padding-bottom' = '8px',
+    'padding-top' = '8px',
+    'padding-left' = '10px',
+    'border-color' = '#DADADA'
+  )
+
+```
+
+3.  Include information about data sources and credits with GitHub link.
+
+```{r}
+#| eval: false
+#| label: data_source
+#| code-fold: true
+#| code-summary: Data sources and attributionå
+tags$div(
+  "Data Sources: Wikipedia, US Census Bureau, ProPublica.org, and AZ Geo Data Hub | ",
+  shiny::icon("github"), 
+  tags$a("Gchism94", href = "https://github.com/Gchism94", target = "_blank"),
+  style = css(
+    display = 'inline-block', 
+    'vertical-align' = 'middle',
+    'text-align' = 'left',
+    'font-family' = 'Montserrat', 
+    color = '#8C8C8C', 
+    'font-size' = '10pt', 
+    width = '1250px', 
+    'padding-top' = '8px', 
+    'padding-left' = '10px'
+  )
+)
+
+```
+
+## 6 - Final Table
+
+```{r}
+#| label: full_table_code
+#| code-fold: true
+#| code-summary: Full table code
+tribal_lands_water_agg <- 
+  tribal_lands_water %>%
+  # Group data by columns
+  group_by(tribe, url, years, resolved, res_color) %>%
+  # Create a percentage column, rounded to two decimal points
+  summarise(
+    combined_names = if (n_distinct(name) > 1) 
+      {paste("+", name[name != tribe], collapse = ", <br>")
+      } 
+    else {
+      ""
+    },
+    land = sum(aland) / (1000^2),
+    water = sum(awater) / (1000^2),
+    pop = sum(pop),
+    .groups = "drop") %>%
+  mutate(combined_names = ifelse(combined_names != "",
+                                 paste0("<div style='font-size: 0.55rem; color: #777;'>",
+                                        combined_names,
+                                        "</div>"),
+                                 combined_names))
+
+# Create a styled header
+header_content <- tags$div(
+  tags$link(
+    href="https://fonts.googleapis.com/css2?family=Bungee&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Nothing+You+Could+Do&family=Permanent+Marker&display=swap",
+    rel = "stylesheet"
+  ),
+  tags$div(
+    tags$div(
+      "Waiting for Water", 
+      style = css(
+        'font-size' = '50pt', 
+        'font-weight' = 'bold', 
+        'font-family' = 'Bungee', 
+        'text-align' = 'left',
+        'margin-bottom' = 0,
+        'padding-left' = '10px',
+        'vertical-align' = 'middle'
+      )
+    ),
+    tags$div(
+      "Arizona Indigenous Tribal Water Rights", 
+      style = css(
+        'font-family' = 'Montserrat',
+        'margin-bottom' = 0,
+        'margin-top' = 0,
+        'font-size' = '28pt',
+        'text-align' = 'left',
+        color = '#8C8C8C',
+        'padding-left' = '10px'
+      )
+    ),
+    tags$div(
+      "...or a lack thereof", 
+      style = css(
+        'font-family' = 'Permanent Marker',
+        'margin-bottom' = 0,
+        'margin-top' = 0,
+        'font-size' = '18pt',
+        'text-align' = 'left',
+        color = 'firebrick',
+        'padding-left' = '10px'
+      )
+    ),
+    style = css(width = '70%')
+  ),
+  tags$div(
+    plotTag(
+      tribal_map_all,
+      alt = "Map of all Arizona Tribes",
+      height = 200
+    ),
+    style = css(width = '30%')
+  ),
+  style = css(
+    width = '1250px',
+    display = 'inline-flex',
+    'align-items' = 'left',
+    'justify-content' = 'space-between'
+  )
+)
+
+footer_content <- 
+  tags$div(
+    tags$link(
+      href = "https://fonts.googleapis.com/css2?family=Bungee&family=Montserrat:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap", 
+      rel = "stylesheet"
+    ),
+    tags$div(
+      tags$sup("*"), 
+      "Kaibab Band of Paiute Indians has not filed a water claim yet.",
+      tags$br(),
+      tags$sup("1"), 
+      "The Winters Doctrine, from the 1908 Supreme Court case ",
+      tags$a(
+        href = "https://en.wikipedia.org/wiki/Winters_v._United_States#:~:text=Winters%20v.%20United%20States%2C%20207%20U.S.%20564%20%281908%29%2C,cases%20where%20the%20rights%20were%20not%20clear.%20",
+        target = "_blank",
+        tags$i("Winters v. United States")
+      ),
+      ", established that Native American tribes have reserved water rights when reservations are created. These rights are considered to have a priority date corresponding to the establishment date of the reservation, making them senior to many other water rights.",
+      tags$br(),
+      tags$sup("2"),
+      "Adjudicated Water Rights resulted from the set of United States Supreme Court cases.",
+      tags$a(
+        href = "https://en.wikipedia.org/wiki/Arizona_v._California",
+        target = "_blank",
+        tags$i("Arizona v. California")
+      ),
+      ", which all deal with disputes over water distribution from the Colorado River between the states of Arizona and California.",
+      style = css(
+        display = 'inline-block',
+        'text-align' = 'left',
+        'align-items' = 'left',
+        'font-family' = 'Montserrat',
+        color = 'black', 
+        'font-size' = '9pt',
+        'border-bottom-style' = 'solid',
+        'border-top-style' = 'solid',
+        width = '1250px',
+        'padding-bottom' = '8px',
+        'padding-top' = '8px',
+        'padding-left' = '10px',
+        'border-color' = '#DADADA',
+      )
+    ),
+    tags$div(
+      "Data Sources: Wikipedia, US Census Bureau, ProPublica.org, and AZ Geo Data Hub | ",
+      shiny::icon("github"), 
+      tags$a("Gchism94", href = "https://github.com/Gchism94", target = "_blank"),
+      style = css(
+        display = 'inline-block', 
+        'vertical-align' = 'middle',
+        'text-align' = 'left',
+        'font-family' = 'Montserrat', 
+        color = '#8C8C8C', 
+        'font-size' = '10pt', 
+        width = '1250px', 
+        'padding-top' = '8px', 
+        'padding-left' = '10px'
+      )
+    )
+  )
+
+# HTML tables for UA position and UA department affiliation
+tribes_table <- 
+  tribal_lands_water_agg %>%
+    st_drop_geometry() %>%
+    mutate(tribe = ifelse(tribe == "Kaibab-Paiute Tribe",
+                          paste0("<a href='", url, "'>", tribe, "</a>", "*", "<br>", combined_names),
+                          paste0("<a href='", url, "'>", tribe, "</a>", "<br>", combined_names)),
+           map = NA
+           ) %>%
+    select(-c(url)) %>%
+    relocate(map, .before = years) %>%
+    relocate(tribe, .before = map) %>%
+    relocate(resolved, .after = years) %>%
+    relocate(pop, .after = resolved) %>%
+  # Reactable argument
+  reactable(
+    # Clean theme with base font size 16pt
+    theme = reactableTheme(
+      style = list(fontSize = "1rem",
+                   fontFamily = "Montserrat, sans-serif")
+    ),
+    width = 1250,
+    # Default table sort by years column
+    defaultSorted = "years",
+    # Default sort order descending
+    defaultSortOrder = "desc",
+    defaultColDef = colDef(
+      vAlign = "center",
+      align = "center",
+      headerVAlign = "center",
+      html = TRUE,
+      ),
+    # Columns list
+    columns = list(
+      # tribe column
+      tribe = colDef(maxWidth = 250,
+                    name = "Tribe",
+                    align = "left",
+                    html = TRUE),
+      
+      combined_names = colDef(show = FALSE), 
+      
+      # pop column
+      pop = colDef(maxWidth = 130,
+                   name = "Population",
+                   align = 'center',
+                    cell = color_tiles(
+                      data = tribal_lands_water_agg,
+                      number_fmt = scales::comma_format(accuracy = 1),
+                      colors = "gray50",
+                      text_color = "white"
+                  )
+                  ),
+      
+      # land column
+      land = colDef(maxWidth = 100,
+                    name = "Land",
+                    align = 'center',
+                    cell = color_tiles(
+                      data = .,
+                      number_fmt = scales::comma_format(accuracy = 1),
+                      colors = paletteer::paletteer_c("ggthemes::Classic Area-Brown", 30)
+                    ),
+                    html = TRUE,
+                    header = JS('function(column) {
+        return column.name + `<div style="color: #737373; font-size: 0.8rem;">km<sup>2</sup></div>`
+      }')
+      ),
+      
+      # water column
+      water = colDef(maxWidth = 100,
+                     name = "Water",
+                     align = 'center',
+                     cell = color_tiles(
+                      data = .,
+                      number_fmt = scales::comma_format(accuracy = 1),
+                      colors = RColorBrewer::brewer.pal(5, 'Blues')
+                     ),
+                    html = TRUE,
+                    header = JS('function(column) {
+        return column.name + `<div style="color: #737373; font-size: 0.8rem;">km<sup>2</sup></div>`
+      }')
+      ),
+      
+      # years column
+      years = colDef(
+        name = 'Years until water rights after filing<sup>1</sup>',
+        align = 'left',
+        maxWidth = 350,
+        html = TRUE,
+        cell = data_bars(
+          data = .,
+          fill_color = MetBrewer::met.brewer('Tsimshian', type = "continuous", direction = -1),
+          text_position = 'none',
+          box_shadow = TRUE,
+          max_value = max(tribal_lands_water_agg$years, na.rm = TRUE),
+          icon = 'droplet',
+          bias = 1.5,
+          bar_height = 4,
+          background = 'transparent',
+          round_edges = TRUE,
+          tooltip = TRUE,
+        )
+      ),
+      resolved = colDef(
+        name = "Water Rights <sup>2</sup>",
+        minWidth = 65,
+        html = TRUE,
+        header = JS('function(column) {
+        return column.name + `<div style="color: #737373; font-size: 0.8rem;">Status</div>`
+      }'),
+        cell = pill_buttons(
+          data = .,
+          color_ref = 'res_color',
+          box_shadow = TRUE
+        )
+        ),
+      res_color = colDef(show = FALSE),
+      map = colDef(
+        name = "",
+        sortable = FALSE,
+        cell = function(value, index){
+          htmltools::plotTag(
+            tribal_maps$plot[[index]],
+            alt = 'plots',
+            height = 75,
+            width = 75,
+            deviceArgs = list(bg = 'transparent'))
+          },
+        width = 200
+      )
+    )
+    )
+
+# Combine the header and the reactable in a single HTML structure
+full_page <- tags$div(
+  header_content,
+  tags$div(
+    tribes_table,
+    style = css('display' = 'flex', 'justify-content' = 'center', 'width' = '100%')
+  ),
+  footer_content,
+  style = css('width' = '100%', 'text-align' = 'center')
+)
+
+```
+
+```{r}
+#| include: false
+#| eval: false
+
+# Save html 
+htmltools::save_html(full_page, 
+                     here("output", "tribal_lands_water.html"),
+                     libdir = "lib")
+
+# Save png
+webshot2::webshot(here("output", "tribal_lands_water.html"), 
+                  file = here("output", "tribal_lands_water.png"), 
+                  vwidth = 1500, 
+                  vheight = 800)
+
+```
+
+```{r}
+#| column: screen-inset
+#| echo: false
+
+div(
+  full_page,
+  )
+```
