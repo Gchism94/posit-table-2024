@@ -49,6 +49,7 @@ pacman::p_load(here,
                ggtext,
                ggrepel,
                ggiraph,
+               ggthemes,
                glue,
                readxl,
                janitor,
@@ -56,10 +57,12 @@ pacman::p_load(here,
                reactablefmtr, # for easier formatting reactable tables
                scales,
                patchwork,
+               paletteer,
+               MetBrewer,
                usmap,
                webshot2)
 
-webshot::install_phantomjs()
+#webshot::install_phantomjs()
 
 # Options to use tigris datasets with sf
 options(tigris_use_cache = TRUE, tigris_class = "sf")
@@ -866,6 +869,9 @@ footer_content <-
         tags$i("Arizona v. California")
       ),
       ", which all deal with disputes over water distribution from the Colorado River between the states of Arizona and California.",
+      tags$br(),
+      tags$sup("3"),
+      "Water is derived from the geographic area within the reservation and does not represent the amount of water allotted by water rights claims. This column serves instead to showcase the amount of water bordering or running through a reservation, but the Tribe may not have actual claims to use this water.",
       style = css(
         display = 'inline-block',
         'text-align' = 'left',
@@ -940,7 +946,61 @@ tribes_table <-
                     align = "left",
                     html = TRUE),
       
-      combined_names = colDef(show = FALSE), 
+      combined_names = colDef(show = FALSE),
+      
+      # map column
+      map = colDef(
+        name = "",
+        sortable = FALSE,
+        cell = function(value, index){
+          htmltools::plotTag(
+            tribal_maps$plot[[index]],
+            alt = 'plots',
+            height = 75,
+            width = 75,
+            deviceArgs = list(bg = 'transparent'))
+          },
+        width = 200
+      ),
+      
+      # years column
+      years = colDef(
+        name = 'Years until water rights after filing<sup>1</sup>',
+        align = 'left',
+        maxWidth = 350,
+        html = TRUE,
+        cell = data_bars(
+          data = .,
+          fill_color = MetBrewer::met.brewer('Tsimshian', type = "continuous", direction = -1),
+          text_position = 'none',
+          box_shadow = TRUE,
+          max_value = max(tribal_lands_water_agg$years, na.rm = TRUE),
+          icon = 'droplet',
+          bias = 1.5,
+          bar_height = 4,
+          background = 'transparent',
+          round_edges = TRUE,
+          tooltip = TRUE,
+        )
+      ),
+      
+      # resolved column
+      resolved = colDef(
+        name = "Water Rights <sup>2</sup>",
+        minWidth = 65,
+        html = TRUE,
+        header = JS('function(column) {
+        return column.name + `<div style="color: #737373; font-size: 0.8rem;">Status</div>`
+      }'),
+        cell = pill_buttons(
+          data = .,
+          color_ref = 'res_color',
+          box_shadow = TRUE
+        )
+        ),
+      
+      # resolved color column (don't show)
+      res_color = colDef(show = FALSE),
       
       # pop column
       pop = colDef(maxWidth = 130,
@@ -971,7 +1031,7 @@ tribes_table <-
       
       # water column
       water = colDef(maxWidth = 100,
-                     name = "Water",
+                     name = "Water<sup>3</sup>",
                      align = 'center',
                      cell = color_tiles(
                       data = .,
@@ -982,54 +1042,6 @@ tribes_table <-
                     header = JS('function(column) {
         return column.name + `<div style="color: #737373; font-size: 0.8rem;">km<sup>2</sup></div>`
       }')
-      ),
-      
-      # years column
-      years = colDef(
-        name = 'Years until water rights after filing<sup>1</sup>',
-        align = 'left',
-        maxWidth = 350,
-        html = TRUE,
-        cell = data_bars(
-          data = .,
-          fill_color = MetBrewer::met.brewer('Tsimshian', type = "continuous", direction = -1),
-          text_position = 'none',
-          box_shadow = TRUE,
-          max_value = max(tribal_lands_water_agg$years, na.rm = TRUE),
-          icon = 'droplet',
-          bias = 1.5,
-          bar_height = 4,
-          background = 'transparent',
-          round_edges = TRUE,
-          tooltip = TRUE,
-        )
-      ),
-      resolved = colDef(
-        name = "Water Rights <sup>2</sup>",
-        minWidth = 65,
-        html = TRUE,
-        header = JS('function(column) {
-        return column.name + `<div style="color: #737373; font-size: 0.8rem;">Status</div>`
-      }'),
-        cell = pill_buttons(
-          data = .,
-          color_ref = 'res_color',
-          box_shadow = TRUE
-        )
-        ),
-      res_color = colDef(show = FALSE),
-      map = colDef(
-        name = "",
-        sortable = FALSE,
-        cell = function(value, index){
-          htmltools::plotTag(
-            tribal_maps$plot[[index]],
-            alt = 'plots',
-            height = 75,
-            width = 75,
-            deviceArgs = list(bg = 'transparent'))
-          },
-        width = 200
       )
     )
     )
